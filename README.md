@@ -1,6 +1,6 @@
 # Maritime Ship Tracker
 
-A real-time ship tracking web application using the AIS Stream API and Leaflet.js for map visualization.
+A real-time ship tracking web application using the AIS Stream API and Leaflet.js for map visualization. Built with Node.js backend proxy for secure API key handling and CORS compliance.
 
 ## Features
 
@@ -9,11 +9,19 @@ A real-time ship tracking web application using the AIS Stream API and Leaflet.j
 - Ship information display (name, MMSI, speed, course, destination)
 - Customizable geographic bounding boxes
 - Clean and responsive UI
+- Secure backend proxy server
+- Ready for Railway.app deployment
+
+## Architecture
+
+- **Frontend**: HTML, CSS, JavaScript with Leaflet.js
+- **Backend**: Node.js + Express + WebSocket proxy
+- **Data Source**: AIS Stream API via WebSocket
 
 ## Prerequisites
 
-- A modern web browser (Chrome, Firefox, Safari, or Edge)
-- AIS Stream API key (free tier available)
+- Node.js 18.x or higher
+- AIS Stream API key (free tier available from https://aisstream.io/)
 
 ## Getting Started
 
@@ -21,67 +29,76 @@ A real-time ship tracking web application using the AIS Stream API and Leaflet.j
 
 1. Visit [https://aisstream.io/](https://aisstream.io/)
 2. Sign up for a free account
-3. Copy your API key from the dashboard
+3. Go to API Keys page and generate a new API key
+4. Copy your API key
 
-### 2. Configure the Application
+### 2. Deploy to Railway.app (Recommended)
 
-1. Open `config.js` in a text editor
-2. Replace `YOUR_API_KEY_HERE` with your actual API key:
+#### Quick Deploy
 
-```javascript
-API_KEY: 'your-actual-api-key-here',
-```
+1. **Connect Repository to Railway**
+   - Go to [Railway.app](https://railway.app/)
+   - Click "New Project"
+   - Select "Deploy from GitHub repo"
+   - Choose your `maritime` repository
 
-3. (Optional) Customize the bounding boxes to focus on specific regions:
+2. **Configure Environment Variables**
+   - In Railway dashboard, go to your project
+   - Click on "Variables" tab
+   - Add new variable:
+     - Name: `AIS_API_KEY`
+     - Value: `your-api-key-here`
+   - Click "Add"
 
-```javascript
-// Example: Track ships in the Mediterranean Sea
-BOUNDING_BOXES: [[[30, -6], [46, 37]]],
-```
+3. **Deploy**
+   - Railway will automatically deploy your application
+   - Once deployed, click on the URL to access your app
+   - Example: `https://maritime-production.up.railway.app`
 
-### 3. Run the Application
+4. **Use the Application**
+   - Open the Railway URL in your browser
+   - Click "Connect to AIS Stream"
+   - Ships will start appearing on the map in 10-30 seconds
 
-You need to serve the files through a web server (not just opening the HTML file directly).
+### 3. Run Locally (Development)
 
-#### Option A: Using Python (Recommended)
-
-If you have Python installed:
-
-```bash
-# Python 3
-python -m http.server 8000
-
-# Python 2
-python -m SimpleHTTPServer 8000
-```
-
-Then open your browser to: `http://localhost:8000`
-
-#### Option B: Using Node.js
-
-If you have Node.js installed, you can use `http-server`:
+#### Install Dependencies
 
 ```bash
-# Install http-server globally (once)
-npm install -g http-server
-
-# Run the server
-http-server -p 8000
+npm install
 ```
 
-Then open your browser to: `http://localhost:8000`
+#### Configure API Key
 
-#### Option C: Using VS Code
+Create a `.env` file in the project root:
 
-If you use VS Code, install the "Live Server" extension and click "Go Live" at the bottom right.
+```bash
+AIS_API_KEY=your-api-key-here
+PORT=3000
+```
 
-### 4. Use the Application
+Or set environment variables directly:
 
-1. Click the "Connect to AIS Stream" button
-2. Wait for ships to appear on the map (this may take a few moments depending on your bounding box)
-3. Click on any ship marker to view detailed information
-4. Use the "Clear Ships" button to remove all markers and start fresh
-5. Use the "Disconnect" button to stop receiving data
+```bash
+export AIS_API_KEY=your-api-key-here
+```
+
+#### Start the Server
+
+```bash
+npm start
+```
+
+The server will start on `http://localhost:3000`
+
+#### Use the Application
+
+1. Open `http://localhost:3000` in your browser
+2. Click "Connect to AIS Stream" button
+3. Wait for ships to appear on the map (10-30 seconds)
+4. Click on any ship marker to view detailed information
+5. Use the "Clear Ships" button to remove all markers
+6. Use the "Disconnect" button to stop receiving data
 
 ## Configuration Options
 
@@ -133,23 +150,28 @@ The application displays the following information for each ship:
 
 ## Troubleshooting
 
-### "Please set your AIS Stream API key" alert
-
-Make sure you've replaced `YOUR_API_KEY_HERE` in `config.js` with your actual API key from aisstream.io.
-
 ### No ships appearing
 
-- Check your browser console for errors (F12)
-- Verify your API key is correct
-- Try a larger bounding box (e.g., global coverage)
-- Wait a few minutes as ship data may be sparse in some regions
-- Ensure you have a stable internet connection
+- **Wait longer**: Ships can take 30-60 seconds to start appearing
+- **Check console**: Open browser console (F12) and look for connection status messages
+- **Verify API key**: Ensure the `AIS_API_KEY` environment variable is set correctly in Railway
+- **Check backend logs**: In Railway dashboard, check the deployment logs for errors
+- **Try larger bounding box**: The default is global coverage `[[[-90, -180], [90, 180]]]`
+- **Sparse regions**: Some geographic areas have less ship traffic
 
 ### WebSocket connection fails
 
-- Check that you're serving the files through a web server (not file://)
-- Verify your firewall allows WebSocket connections
-- Check the browser console for specific error messages
+- **Railway deployment**: Ensure the app is fully deployed and running
+- **Environment variables**: Verify `AIS_API_KEY` is set in Railway variables
+- **Backend logs**: Check Railway logs for WebSocket connection errors
+- **Firewall**: Verify your network allows WebSocket connections
+- **API key validity**: Check your API key is active at https://aisstream.io/apikeys
+
+### Local development issues
+
+- **Port already in use**: Change `PORT` in `.env` file
+- **Dependencies not installed**: Run `npm install`
+- **API key not set**: Create `.env` file with `AIS_API_KEY`
 
 ## API Rate Limits
 
