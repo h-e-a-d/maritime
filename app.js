@@ -32,6 +32,16 @@ class ShipTracker {
         document.getElementById('connect-btn').addEventListener('click', () => this.connect());
         document.getElementById('disconnect-btn').addEventListener('click', () => this.disconnect());
         document.getElementById('clear-btn').addEventListener('click', () => this.clearShips());
+
+        // Search functionality
+        document.getElementById('search-btn').addEventListener('click', () => this.searchShips());
+        document.getElementById('clear-search-btn').addEventListener('click', () => this.clearSearch());
+        document.getElementById('search-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.searchShips();
+            }
+        });
+        document.getElementById('close-results').addEventListener('click', () => this.hideSearchResults());
     }
 
     // Connect to Backend Proxy WebSocket
@@ -287,6 +297,153 @@ class ShipTracker {
     updateButtons(connected) {
         document.getElementById('connect-btn').disabled = connected;
         document.getElementById('disconnect-btn').disabled = !connected;
+    }
+
+    // Search ships by name, MMSI, or call sign
+    searchShips() {
+        const searchInput = document.getElementById('search-input');
+        const query = searchInput.value.trim().toLowerCase();
+
+        if (!query) {
+            alert('Please enter a search term (ship name, MMSI, or call sign)');
+            return;
+        }
+
+        if (this.ships.size === 0) {
+            alert('No ships loaded yet. Please wait for ships to appear on the map.');
+            return;
+        }
+
+        // Search through all ships
+        const results = [];
+        this.ships.forEach((shipData, mmsi) => {
+            const name = (shipData.name || '').toLowerCase();
+            const mmsiStr = (shipData.mmsi || '').toString().toLowerCase();
+            const callSign = (shipData.callSign || '').toLowerCase();
+
+            if (name.includes(query) || mmsiStr.includes(query) || callSign.includes(query)) {
+                results.push({
+                    ...shipData,
+                    matchField: name.includes(query) ? 'name' :
+                               mmsiStr.includes(query) ? 'mmsi' : 'callSign'
+                });
+            }
+        });
+
+        this.displaySearchResults(results, query);
+    }
+
+    // Display search results
+    displaySearchResults(results, query) {
+        const resultsPanel = document.getElementById('search-results');
+        const resultsList = document.getElementById('search-results-list');
+        const resultsCount = document.getElementById('search-results-count');
+
+        if (results.length === 0) {
+            resultsCount.textContent = 'No results found';
+            resultsList.innerHTML = '<div style="padding: 1rem; text-align: center; color: #6b7280;">No ships found matching your search.</div>';
+            resultsPanel.style.display = 'block';
+            return;
+        }
+
+        resultsCount.textContent = `${results.length} result${results.length !== 1 ? 's' : ''} found`;
+
+        // Create result items
+        resultsList.innerHTML = '';
+        results.forEach(ship => {
+            const resultItem = document.createElement('div');
+            resultItem.className = 'search-result-item';
+
+            // Highlight the matched field
+            const nameDisplay = this.highlightMatch(ship.name, query, ship.matchField === 'name');
+            const mmsiDisplay = this.highlightMatch(ship.mmsi.toString(), query, ship.matchField === 'mmsi');
+            const callSignDisplay = this.highlightMatch(ship.callSign, query, ship.matchField === 'callSign');
+
+            resultItem.innerHTML = `
+                <div class="search-result-name">${nameDisplay}</div>
+                <div class="search-result-details">
+                    MMSI: ${mmsiDisplay} | Call Sign: ${callSignDisplay} |
+                    Speed: ${ship.speed.toFixed(1)} knots |
+                    Position: ${ship.lat.toFixed(2)}, ${ship.lon.toFixed(2)}
+                </div>
+            `;
+
+            resultItem.addEventListener('click', () => {
+                this.selectShip(ship);
+            });
+
+            resultsList.appendChild(resultItem);
+        });
+
+        resultsPanel.style.display = 'block';
+    }
+
+    // Highlight matching text
+    highlightMatch(text, query, isMatch) {
+        if (!isMatch) return text;
+
+        const regex = new RegExp(`(${query})`, 'gi');
+        return text.replace(regex, '<span class="search-result-highlight">$1</span>');
+    }
+
+    // Select and focus on a ship
+    selectShip(shipData) {
+        // Zoom to ship location
+        this.map.setView([shipData.lat, shipData.lon], 10, {
+            animate: true,
+            duration: 1
+        });
+
+        // Get the marker and make it pulse
+        const marker = this.markers.get(shipData.mmsi);
+        if (marker) {
+            // Remove previous highlights
+            this.markers.forEach(m => {
+                const element = m.getElement();
+                if (element) {
+                    element.classList.remove('ship-marker-highlighted');
+                }
+            });
+
+            // Highlight this marker
+            const element = marker.getElement();
+            if (element) {
+                element.classList.add('ship-marker-highlighted');
+
+                // Remove highlight after 5 seconds
+                setTimeout(() => {
+                    element.classList.remove('ship-marker-highlighted');
+                }, 5000);
+            }
+
+            // Open popup
+            marker.openPopup();
+        }
+
+        // Show ship info in panel
+        this.showShipInfo(shipData);
+
+        // Close search results
+        this.hideSearchResults();
+    }
+
+    // Clear search
+    clearSearch() {
+        document.getElementById('search-input').value = '';
+        this.hideSearchResults();
+
+        // Remove all highlights
+        this.markers.forEach(marker => {
+            const element = marker.getElement();
+            if (element) {
+                element.classList.remove('ship-marker-highlighted');
+            }
+        });
+    }
+
+    // Hide search results panel
+    hideSearchResults() {
+        document.getElementById('search-results').style.display = 'none';
     }
 }
 
