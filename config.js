@@ -4,7 +4,7 @@
 const CONFIG = {
     // Your AIS Stream API Key
     // Sign up at https://aisstream.io/ to get a free API key
-    API_KEY: 'YOUR_API_KEY_HERE',
+    API_KEY: 'f293f83853263b13e78e1503402e1c374f67beb7',
 
     // Bounding boxes define the geographic areas to receive ship data
     // Format: [[minLat, minLon], [maxLat, maxLon]]
