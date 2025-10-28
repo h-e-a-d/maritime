@@ -34,40 +34,39 @@ class ShipTracker {
         document.getElementById('clear-btn').addEventListener('click', () => this.clearShips());
     }
 
-    // Connect to AIS Stream WebSocket
+    // Connect to Backend Proxy WebSocket
     connect() {
         if (this.isConnected) {
             console.log('Already connected');
             return;
         }
 
-        if (!CONFIG.API_KEY || CONFIG.API_KEY === 'YOUR_API_KEY_HERE') {
-            alert('Please set your AIS Stream API key in config.js');
-            return;
-        }
-
-        console.log('Connecting to AIS Stream...');
+        console.log('Connecting to backend proxy...');
         this.updateStatus('Connecting...', false);
 
         try {
-            this.websocket = new WebSocket('wss://stream.aisstream.io/v0/stream');
+            // Determine WebSocket URL based on environment
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}`;
+
+            console.log('Connecting to:', wsUrl);
+            this.websocket = new WebSocket(wsUrl);
 
             this.websocket.onopen = () => {
-                console.log('WebSocket connected');
+                console.log('Connected to backend proxy');
+                this.updateStatus('Connecting to AIS Stream...', false);
 
-                // Send subscription message
+                // Optionally send subscription preferences to backend
                 const subscriptionMessage = {
-                    APIKey: CONFIG.API_KEY,
-                    BoundingBoxes: CONFIG.BOUNDING_BOXES,
-                    FilterMessageTypes: ['PositionReport']
+                    type: 'subscribe',
+                    subscription: {
+                        BoundingBoxes: CONFIG.BOUNDING_BOXES,
+                        FilterMessageTypes: ['PositionReport']
+                    }
                 };
 
                 this.websocket.send(JSON.stringify(subscriptionMessage));
-                console.log('Subscription message sent');
-
-                this.isConnected = true;
-                this.updateStatus('Connected', true);
-                this.updateButtons(true);
+                console.log('Subscription preferences sent to backend');
             };
 
             this.websocket.onmessage = (event) => {
@@ -88,7 +87,7 @@ class ShipTracker {
 
         } catch (error) {
             console.error('Connection error:', error);
-            alert('Failed to connect to AIS Stream: ' + error.message);
+            alert('Failed to connect to backend: ' + error.message);
             this.updateStatus('Error', false);
         }
     }
@@ -101,14 +100,39 @@ class ShipTracker {
         }
     }
 
-    // Handle incoming AIS messages
+    // Handle incoming messages from backend proxy
     handleMessage(data) {
         try {
             const message = JSON.parse(data);
 
-            // Check if this is a position report
-            if (message.MessageType === 'PositionReport') {
-                this.updateShipPosition(message);
+            // Handle different message types from proxy
+            if (message.type === 'status') {
+                // Handle status updates from proxy
+                if (message.message === 'connected') {
+                    console.log('Backend connected to AIS Stream');
+                    this.isConnected = true;
+                    this.updateStatus('Connected', true);
+                    this.updateButtons(true);
+                } else if (message.message === 'disconnected') {
+                    console.log('Backend disconnected from AIS Stream');
+                    this.isConnected = false;
+                    this.updateStatus('Disconnected', false);
+                    this.updateButtons(false);
+                } else if (message.message === 'connected_to_proxy') {
+                    console.log('Connected to proxy, waiting for AIS Stream connection...');
+                    this.updateStatus('Connecting...', false);
+                } else if (message.message === 'error') {
+                    console.error('Backend error:', message.error);
+                    this.updateStatus('Error', false);
+                }
+            } else if (message.type === 'ais_data') {
+                // Handle AIS data forwarded from proxy
+                const aisMessage = message.data;
+
+                // Check if this is a position report
+                if (aisMessage.MessageType === 'PositionReport') {
+                    this.updateShipPosition(aisMessage);
+                }
             }
         } catch (error) {
             console.error('Error parsing message:', error);

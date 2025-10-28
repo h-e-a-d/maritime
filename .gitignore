@@ -2,8 +2,12 @@
 # (Uncomment the line below if you want to keep your API key private)
 # config.js
 
-# Node modules (if using npm in the future)
+# Environment variables
+.env
+
+# Node modules and package lock
 node_modules/
+package-lock.json
 
 # OS files
 .DS_Store
