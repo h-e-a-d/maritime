@@ -1,0 +1,21 @@
+# Ignore config.js if it contains real API keys
+# (Uncomment the line below if you want to keep your API key private)
+# config.js
+
+# Node modules (if using npm in the future)
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
