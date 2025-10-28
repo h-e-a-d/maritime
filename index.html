@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maritime Ship Tracker</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Maritime Ship Tracker</h1>
+            <div class="status">
+                <span id="connection-status" class="status-badge disconnected">Disconnected</span>
+                <span id="ship-count" class="info-badge">Ships: 0</span>
+            </div>
+        </header>
+
+        <div class="controls">
+            <button id="connect-btn" class="btn btn-primary">Connect to AIS Stream</button>
+            <button id="disconnect-btn" class="btn btn-secondary" disabled>Disconnect</button>
+            <button id="clear-btn" class="btn btn-secondary">Clear Ships</button>
+
+            <div class="filter-controls">
+                <label>
+                    <input type="checkbox" id="filter-position" checked>
+                    Show Position Reports
+                </label>
+            </div>
+        </div>
+
+        <div id="map"></div>
+
+        <div class="info-panel">
+            <h3>Selected Ship Info</h3>
+            <div id="ship-info">
+                <p>Click on a ship marker to view details</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Configuration -->
+    <script src="config.js"></script>
+
+    <!-- Main Application -->
+    <script src="app.js"></script>
+</body>
+</html>
