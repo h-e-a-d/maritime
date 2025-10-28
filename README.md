@@ -45,9 +45,14 @@ A real-time ship tracking web application using the AIS Stream API and Leaflet.j
 2. **Configure Environment Variables**
    - In Railway dashboard, go to your project
    - Click on "Variables" tab
-   - Add new variable:
+   - Add required variable:
      - Name: `AIS_API_KEY`
      - Value: `your-api-key-here`
+   - (Optional) Add MMSI filtering variables:
+     - Name: `MMSI_MIN`
+     - Value: `247187700` (example: Portuguese vessels start)
+     - Name: `MMSI_MAX`
+     - Value: `247435300` (example: Portuguese vessels end)
    - Click "Add"
 
 3. **Deploy**
@@ -127,6 +132,49 @@ BOUNDING_BOXES: [
     [[49, -6], [51, 2]]      // English Channel
 ],
 ```
+
+### MMSI Range Filtering (Backend)
+
+The backend server supports filtering ships by MMSI range. This is useful for tracking specific fleets or vessels from a particular country.
+
+**How it works:**
+- Configured via environment variables `MMSI_MIN` and `MMSI_MAX`
+- Filtering happens on the backend before data is sent to clients
+- Reduces bandwidth and improves performance
+- If not configured, all ships are forwarded (no filtering)
+
+**Common MMSI Ranges by Country (MID codes):**
+- **201-xxx-xxx**: Albania
+- **247-xxx-xxx**: Portugal
+- **255-xxx-xxx**: Portugal (Madeira)
+- **304-xxx-xxx**: Anguilla
+- **338-xxx-xxx**: USA
+- **636-xxx-xxx**: Liberia
+
+**Example: Track Portuguese vessels**
+```bash
+MMSI_MIN=247000000
+MMSI_MAX=247999999
+```
+
+**Example: Track specific ship range**
+```bash
+MMSI_MIN=247187700
+MMSI_MAX=247435300
+```
+
+**Railway Configuration:**
+1. Go to Railway dashboard → Variables
+2. Add `MMSI_MIN` with your minimum MMSI value
+3. Add `MMSI_MAX` with your maximum MMSI value
+4. Redeploy (automatic)
+
+**Statistics:**
+Check filtering statistics at `/api/status` endpoint:
+- Total messages received
+- Total messages filtered
+- Total messages forwarded
+- Filter rate percentage
 
 ## Ship Information
 

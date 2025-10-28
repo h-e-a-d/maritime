@@ -11,6 +11,17 @@ const AIS_STREAM_URL = 'wss://stream.aisstream.io/v0/stream';
 const API_KEY = process.env.AIS_API_KEY || 'f293f83853263b13e78e1503402e1c374f67beb7';
 const PORT = process.env.PORT || 3000;
 
+// MMSI Range Filtering (Optional)
+// Set these environment variables to filter ships by MMSI range
+// If not set, all ships will be forwarded to clients
+const MMSI_MIN = process.env.MMSI_MIN ? parseInt(process.env.MMSI_MIN) : null;
+const MMSI_MAX = process.env.MMSI_MAX ? parseInt(process.env.MMSI_MAX) : null;
+
+// Statistics
+let totalMessagesReceived = 0;
+let totalMessagesFiltered = 0;
+let totalMessagesForwarded = 0;
+
 // Create Express app
 const app = express();
 const server = http.createServer(app);
@@ -26,6 +37,21 @@ const clients = new Set();
 let aisStreamSocket = null;
 let reconnectTimeout = null;
 let isConnecting = false;
+
+// Check if MMSI filtering is enabled
+function isMMSIFilterEnabled() {
+    return MMSI_MIN !== null && MMSI_MAX !== null;
+}
+
+// Check if MMSI is within the configured range
+function isMMSIInRange(mmsi) {
+    if (!isMMSIFilterEnabled()) {
+        return true; // No filtering, accept all
+    }
+
+    const mmsiNum = parseInt(mmsi);
+    return mmsiNum >= MMSI_MIN && mmsiNum <= MMSI_MAX;
+}
 
 // Connect to AIS Stream
 function connectToAISStream() {
@@ -63,12 +89,40 @@ function connectToAISStream() {
         });
 
         aisStreamSocket.on('message', (data) => {
-            // Forward AIS data to all connected browser clients
-            const messageStr = data.toString();
-            broadcastToClients({
-                type: 'ais_data',
-                data: JSON.parse(messageStr)
-            });
+            totalMessagesReceived++;
+
+            try {
+                const messageStr = data.toString();
+                const aisMessage = JSON.parse(messageStr);
+
+                // Extract MMSI from metadata or message
+                let mmsi = null;
+                if (aisMessage.MetaData && aisMessage.MetaData.MMSI) {
+                    mmsi = aisMessage.MetaData.MMSI;
+                } else if (aisMessage.Message && aisMessage.Message.PositionReport) {
+                    mmsi = aisMessage.Message.PositionReport.UserID;
+                }
+
+                // Apply MMSI filtering if enabled
+                if (mmsi && !isMMSIInRange(mmsi)) {
+                    totalMessagesFiltered++;
+                    // Log periodically (every 100 filtered messages)
+                    if (totalMessagesFiltered % 100 === 0) {
+                        console.log(`Filtered ${totalMessagesFiltered} messages outside MMSI range [${MMSI_MIN}-${MMSI_MAX}]`);
+                    }
+                    return; // Don't forward this message
+                }
+
+                // Forward AIS data to all connected browser clients
+                totalMessagesForwarded++;
+                broadcastToClients({
+                    type: 'ais_data',
+                    data: aisMessage
+                });
+
+            } catch (error) {
+                console.error('Error processing AIS message:', error);
+            }
         });
 
         aisStreamSocket.on('error', (error) => {
@@ -193,6 +247,8 @@ app.get('/health', (req, res) => {
         status: 'ok',
         clients: clients.size,
         aisStreamConnected: aisStreamSocket && aisStreamSocket.readyState === WebSocket.OPEN,
+        mmsiFilterEnabled: isMMSIFilterEnabled(),
+        mmsiRange: isMMSIFilterEnabled() ? { min: MMSI_MIN, max: MMSI_MAX } : null,
         timestamp: new Date().toISOString()
     });
 });
@@ -205,12 +261,28 @@ app.get('/api/status', (req, res) => {
         aisStreamStatus: aisStreamSocket ?
             (aisStreamSocket.readyState === WebSocket.OPEN ? 'connected' : 'disconnected')
             : 'disconnected',
+        mmsiFilter: {
+            enabled: isMMSIFilterEnabled(),
+            range: isMMSIFilterEnabled() ? { min: MMSI_MIN, max: MMSI_MAX } : null
+        },
+        statistics: {
+            totalReceived: totalMessagesReceived,
+            totalFiltered: totalMessagesFiltered,
+            totalForwarded: totalMessagesForwarded,
+            filterRate: totalMessagesReceived > 0
+                ? ((totalMessagesFiltered / totalMessagesReceived) * 100).toFixed(2) + '%'
+                : '0%'
+        },
         timestamp: new Date().toISOString()
     });
 });
 
 // Start server
 server.listen(PORT, () => {
+    const filterStatus = isMMSIFilterEnabled()
+        ? `ENABLED (${MMSI_MIN} - ${MMSI_MAX})`
+        : 'DISABLED (All ships)';
+
     console.log(`
 ========================================
 Maritime Ship Tracker Server
@@ -219,6 +291,8 @@ Server running on port ${PORT}
 Frontend: http://localhost:${PORT}
 Health check: http://localhost:${PORT}/health
 Status API: http://localhost:${PORT}/api/status
+
+MMSI Filtering: ${filterStatus}
 ========================================
     `);
 });
