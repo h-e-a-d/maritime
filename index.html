@@ -26,12 +26,26 @@
             <button id="disconnect-btn" class="btn btn-secondary" disabled>Disconnect</button>
             <button id="clear-btn" class="btn btn-secondary">Clear Ships</button>
 
+            <div class="search-container">
+                <input type="text" id="search-input" class="search-input" placeholder="Search by ship name, MMSI, or call sign..." />
+                <button id="search-btn" class="btn btn-search">Search</button>
+                <button id="clear-search-btn" class="btn btn-secondary-small">Clear</button>
+            </div>
+
             <div class="filter-controls">
                 <label>
                     <input type="checkbox" id="filter-position" checked>
                     Show Position Reports
                 </label>
             </div>
+        </div>
+
+        <div id="search-results" class="search-results" style="display: none;">
+            <div class="search-results-header">
+                <span id="search-results-count">0 results</span>
+                <button id="close-results" class="btn-close">×</button>
+            </div>
+            <div id="search-results-list" class="search-results-list"></div>
         </div>
 
         <div id="map"></div>
